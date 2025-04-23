@@ -1,0 +1,8 @@
+torch
+torchvision
+scikit-learn
+opencv-python
+kagglehub
+matplotlib
+pandas
+notebook

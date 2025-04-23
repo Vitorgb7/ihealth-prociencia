@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.swp
+
+# VS Code
+.vscode/
+
+# Virtualenv
+venv/
+
+# Kaggle cache
+~/.cache/kagglehub/
+
+data/
