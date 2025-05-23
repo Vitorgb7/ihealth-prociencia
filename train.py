@@ -4,49 +4,39 @@ import torch.nn as nn
 from torchvision import models
 from utils.data_loader import get_data_loaders
 
-os.makedirs("models", exist_ok=True)
-
+# Seleciona o dispositivo
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Usando dispositivo: {device}")
 
-train_loader, test_loader = get_data_loaders(
+_, test_loader = get_data_loaders(
     train_path='data/raw/C-NMC_Leukemia/training_data',
     test_path='data/raw/C-NMC_Leukemia/testing_data'
 )
 
-
-num_classes = len(train_loader.dataset.classes)
+# Descobrir número de classes a partir dos dados
+num_classes = len(test_loader.dataset.classes)
 print(f"Número de classes no dataset: {num_classes}")
+
+# Criar a estrutura do modelo e ajustar camada final
 model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
 model.fc = nn.Linear(model.fc.in_features, num_classes)
 model = model.to(device)
 
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+# Carregar os pesos salvos
+model.load_state_dict(torch.load('models/leukemia_model.pth', map_location=device))
+model.eval()
 
-print("Iniciando o treinamento...")
+# Avaliação
+correct = 0
+total = 0
 
-for epoch in range(10):
-    model.train()
-    running_loss = 0.0
-    print(f"Epoch {epoch+1}/{10} começando...")
-    for batch_idx, (images, labels) in enumerate(train_loader):
+with torch.no_grad():
+    for images, labels in test_loader:
         images, labels = images.to(device), labels.to(device)
-
-        optimizer.zero_grad()
         outputs = model(images)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
+        _, predicted = torch.max(outputs.data, 1)
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
 
-        running_loss += loss.item()
-
-        # A cada 100 batches, imprima o progresso
-        if (batch_idx + 1) % 100 == 0:
-            print(f"Batch [{batch_idx + 1}/{len(train_loader)}], Loss: {running_loss / (batch_idx + 1):.4f}")
-
-    print(f"Epoch {epoch + 1} concluída, Loss média: {running_loss / len(train_loader):.4f}")
-
-# Salvando o modelo treinado
-torch.save(model.state_dict(), 'models/leukemia_model.pth')
-print("✅ Modelo salvo em models/leukemia_model.pth")
+# Mostrar a acurácia
+print(f"🔍 Acurácia no conjunto de teste: {100 * correct / total:.2f}%")
